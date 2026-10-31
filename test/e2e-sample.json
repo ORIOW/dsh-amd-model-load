@@ -1,0 +1,205 @@
+{
+  "capturedAt": "2026-10-25T09:56:22.758Z",
+  "upstreamRoundTripMs": 25442,
+  "catalogReadLatencyMs": 0,
+  "loadReadLatencyMs": 0,
+  "responseEnvelope": {
+    "type": "server-response",
+    "rpcId": "e2e-1",
+    "result": {
+      "ok": true,
+      "value": {
+        "ts": 1792922157511,
+        "source": "shared",
+        "error": null,
+        "stale": false,
+        "loadTs": 1792922182755,
+        "loadStale": false,
+        "groups": [
+          {
+            "label": "VLM (Vision)",
+            "models": [
+              {
+                "id": "MiniCPM-V-4.7-35B-A3B",
+                "state": "idle",
+                "utilization": 14.8,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "Qwen3.8-27B",
+                "state": "idle",
+                "utilization": 21.3,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "Gemma-4-31B-IT",
+                "state": "idle",
+                "utilization": 25.8,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "Qwen3.8-Flash-Next",
+                "state": "idle",
+                "utilization": 42.2,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "DeepSeek-V4.1-Flash",
+                "state": "full",
+                "utilization": 100,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "MiMo-V2.6-Flash",
+                "state": "full",
+                "utilization": 100,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "MiniCPM-V-4.7-1B",
+                "state": "unknown",
+                "utilization": null,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": false,
+                "stale": false
+              }
+            ]
+          },
+          {
+            "label": "LLM (Text)",
+            "models": [
+              {
+                "id": "MiniCPM5-2B",
+                "state": "idle",
+                "utilization": 4.7,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "DeepSeek-V4-Flash",
+                "state": "busy",
+                "utilization": 67.4,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "GLM-5.3-Flash",
+                "state": "full",
+                "utilization": 93.8,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              }
+            ]
+          },
+          {
+            "label": "Decision (Classifier)",
+            "models": [
+              {
+                "id": "Clef",
+                "state": "idle",
+                "utilization": 0.8,
+                "free": false,
+                "badgeLabel": null,
+                "hasLoad": true,
+                "stale": false
+              },
+              {
+                "id": "d3",
+                "state": "unknown",
+                "utilization": null,
+                "free": false,
+                "badgeLabel": null,
+                "hasLoad": false,
+                "stale": false
+              },
+              {
+                "id": "d3-flash",
+                "state": "unknown",
+                "utilization": null,
+                "free": false,
+                "badgeLabel": null,
+                "hasLoad": false,
+                "stale": false
+              }
+            ]
+          },
+          {
+            "label": "TTS (Speech)",
+            "models": [
+              {
+                "id": "OmniVoice",
+                "state": "unknown",
+                "utilization": null,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": false,
+                "stale": false
+              }
+            ]
+          },
+          {
+            "label": "OCR (Document)",
+            "models": [
+              {
+                "id": "MinerU2.5-Pro",
+                "state": "idle",
+                "utilization": 4.7,
+                "free": true,
+                "badgeLabel": "Free",
+                "hasLoad": true,
+                "stale": false
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "groupSummary": [
+    {
+      "label": "VLM (Vision)",
+      "count": 7
+    },
+    {
+      "label": "LLM (Text)",
+      "count": 3
+    },
+    {
+      "label": "Decision (Classifier)",
+      "count": 3
+    },
+    {
+      "label": "TTS (Speech)",
+      "count": 1
+    },
+    {
+      "label": "OCR (Document)",
+      "count": 1
+    }
+  ]
+}

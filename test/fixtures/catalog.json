@@ -1,0 +1,167 @@
+[
+  {
+    "id": "MiMo-V2.6-Flash",
+    "full_id": "model_gateway:MiMo-V2.6-Flash",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "Radeon Cloud",
+    "description": "MiMo-V2.6-Flash served by the AMD GPU Cloud",
+    "sort_order": 0,
+    "family": "custom"
+  },
+  {
+    "id": "DeepSeek-V4.1-Flash",
+    "full_id": "model_gateway:DeepSeek-V4.1-Flash",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "DeepSeek",
+    "description": "DeepSeek-V4.1-Flash-1017 served by the AMD GPU Cloud",
+    "sort_order": 1,
+    "family": "custom"
+  },
+  {
+    "id": "DeepSeek-V4-Flash",
+    "full_id": "model_gateway:DeepSeek-V4-Flash",
+    "capability_key": "text",
+    "capability_label": "LLM (Text)",
+    "badge_label": "Free",
+    "publisher": "DeepSeek",
+    "description": "DeepSeek V4 Flash 0731 served by the AMD GPU Cloud",
+    "sort_order": 2,
+    "family": "custom"
+  },
+  {
+    "id": "GLM-5.3-Flash",
+    "full_id": "model_gateway:GLM-5.3-Flash",
+    "capability_key": "text",
+    "capability_label": "LLM (Text)",
+    "badge_label": "Free",
+    "publisher": "Z.ai",
+    "description": "GLM-5.3-Flash served by the AMD GPU Cloud",
+    "sort_order": 3,
+    "family": "custom"
+  },
+  {
+    "id": "Qwen3.8-Flash-Next",
+    "full_id": "model_gateway:Qwen3.8-Flash-Next",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "Qwen",
+    "description": "Qwen3.8-Flash-Next served by the AMD GPU Cloud",
+    "sort_order": 4,
+    "family": "custom"
+  },
+  {
+    "id": "Qwen3.8-27B",
+    "full_id": "model_gateway:Qwen3.8-27B",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "Qwen",
+    "description": "Qwen3.8-27B served by the AMD GPU Cloud",
+    "sort_order": 5,
+    "family": "custom"
+  },
+  {
+    "id": "Gemma-4-31B-IT",
+    "full_id": "model_gateway:Gemma-4-31B-IT",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "Google",
+    "description": "Gemma-4-31B-IT served by the AMD GPU Cloud",
+    "sort_order": 6,
+    "family": "custom"
+  },
+  {
+    "id": "d3",
+    "full_id": "model_gateway:d3",
+    "capability_key": "decision",
+    "capability_label": "Decision (Classifier)",
+    "badge_label": null,
+    "publisher": null,
+    "description": "vLLM-SR's 27B decision model: typed questions about text, images or video, answered with probabilities on /v1/systemone.",
+    "sort_order": 7,
+    "family": "custom"
+  },
+  {
+    "id": "d3-flash",
+    "full_id": "model_gateway:d3-flash",
+    "capability_key": "decision",
+    "capability_label": "Decision (Classifier)",
+    "badge_label": null,
+    "publisher": null,
+    "description": "vLLM-SR's 9B decision model, faster than d3: typed questions about text, images or video, answered with probabilities.",
+    "sort_order": 8,
+    "family": "custom"
+  },
+  {
+    "id": "Clef",
+    "full_id": "model_gateway:Clef",
+    "capability_key": "decision",
+    "capability_label": "Decision (Classifier)",
+    "badge_label": null,
+    "publisher": null,
+    "description": "Cloudflare's 27B decision model: answers typed questions about a situation with probabilities, on /v1/systemone.",
+    "sort_order": 9,
+    "family": "custom"
+  },
+  {
+    "id": "MiniCPM-V-4.7-35B-A3B",
+    "full_id": "model_gateway:MiniCPM-V-4.7-35B-A3B",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "OpenBMB",
+    "description": "MiniCPM-V-4.7-35B-A3B served by the AMD GPU Cloud",
+    "sort_order": 10,
+    "family": "custom"
+  },
+  {
+    "id": "MiniCPM-V-4.7-1B",
+    "full_id": "model_gateway:MiniCPM-V-4.7-1B",
+    "capability_key": "vision",
+    "capability_label": "VLM (Vision)",
+    "badge_label": "Free",
+    "publisher": "OpenBMB",
+    "description": "MiniCPM-V-4.7-1B served by the AMD GPU Cloud",
+    "sort_order": 11,
+    "family": "custom"
+  },
+  {
+    "id": "MiniCPM5-2B",
+    "full_id": "model_gateway:MiniCPM5-2B",
+    "capability_key": "text",
+    "capability_label": "LLM (Text)",
+    "badge_label": "Free",
+    "publisher": "OpenBMB",
+    "description": "MiniCPM5-2B served by the AMD GPU Cloud",
+    "sort_order": 12,
+    "family": "custom"
+  },
+  {
+    "id": "OmniVoice",
+    "full_id": "model_gateway:OmniVoice",
+    "capability_key": "speech",
+    "capability_label": "TTS (Speech)",
+    "badge_label": "Free",
+    "publisher": "Radeon Cloud",
+    "description": "Multilingual text-to-speech on /v1/audio/speech, with preset, described or cloned voices. Non-commercial use only.",
+    "sort_order": 13,
+    "family": "custom"
+  },
+  {
+    "id": "MinerU2.5-Pro",
+    "full_id": "model_gateway:MinerU2.5-Pro",
+    "capability_key": "ocr",
+    "capability_label": "OCR (Document)",
+    "badge_label": "Free",
+    "publisher": "Radeon Cloud",
+    "description": "MinerU2.5-Pro served by the AMD GPU Cloud",
+    "sort_order": 14,
+    "family": "custom"
+  }
+]
