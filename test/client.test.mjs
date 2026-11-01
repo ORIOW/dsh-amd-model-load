@@ -73,11 +73,23 @@ function createMiniReact() {
       }
       return [slots[index], set]
     },
-    useEffect(fn) {
+    useEffect(fn, deps) {
       const index = cursor
       cursor += 1
-      if (!(index in slots)) {
-        slots[index] = true
+      // 与真实 React 一致：**没有依赖数组 ⇒ 每次提交都跑**；有数组则浅比较。
+      // P3 把渲染计数挪到「无依赖 effect」之后，微型渲染器必须支持这条语义，
+      // 否则「5000 次渲染只产生少量上报」这类用例根本测不出来。
+      const depsKey = Array.isArray(deps) ? deps : null
+      const previous = slots[index]
+      const first = previous === undefined
+      const changed =
+        first ||
+        depsKey === null ||
+        !Array.isArray(previous.deps) ||
+        previous.deps.length !== depsKey.length ||
+        depsKey.some((value, i) => !Object.is(value, previous.deps[i]))
+      if (changed) {
+        slots[index] = { deps: depsKey }
         pendingEffects.push(fn)
       }
     },
@@ -1504,6 +1516,46 @@ await test('apply / register 各上报一条 diag（宿主日志可 headless 判
   mini.unmount()
 })
 
+await test('渲染上报走阶梯：5000 次提交最多 12 条 render diag（防日志洪水）', async () => {
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
+  const props = {
+    provider: { id: 'amd', name: 'AMD' },
+    model: { id: 'Qwen3.8-27B', name: 'Qwen3.8-27B' },
+    placement: 'option',
+    selected: false,
+    ...mounted.modelRow.spec.inject(),
+  }
+  const countRenderReports = () =>
+    mounted.diagReports.filter((entry) => entry.payload && entry.payload.stage === 'render').length
+  const before = countRenderReports()
+  for (let i = 0; i < 5000; i += 1) {
+    await mini.render(mounted.modelRow.Component, props)
+  }
+  const reports = countRenderReports() - before
+  // 旧实现「每 25 次一条」在 5000 次渲染时会发 200 条；真机 25 分钟产生 2 231 条，
+  // 占了 harness.log 的 86%。阶梯后 5000 次只有 10/100/1000 三个刻度。
+  assert.ok(reports <= 12, `5000 次渲染最多 12 条 render 上报，实际 ${reports}`)
+  assert.ok(reports >= 1, '至少要留下刻度记录，否则观测能力被删没了')
+})
+
+await test('trigger 布局只输出纯模型名，且 effect 仍记下本次布局（P3 后观测不丢）', async () => {
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
+  const diag = mounted.settings.spec.inject().diag
+  const beforeAmd = diag.rowOptionAmdRenders
+  const tree = await mini.render(mounted.modelRow.Component, {
+    provider: { id: 'apigoto', name: 'API' },
+    model: { id: 'deepseek-flash', name: 'DeepSeek-V4.1-Flash' },
+    placement: 'trigger',
+    selected: true,
+    ...mounted.modelRow.spec.inject(),
+  })
+  // trigger 是收起状态的按钮：只出模型名（连 1017 徽章都不出，那是 option 行才有的）。
+  assert.equal(tree, 'DeepSeek-V4.1-Flash', `trigger 应只返回纯模型名，实际：${JSON.stringify(tree)}`)
+  assert.equal(diag.rowLastSeen.placement, 'trigger', 'effect 应记下本次布局，否则 P3 之后观测丢失')
+  assert.equal(diag.rowOptionAmdRenders, beforeAmd, 'trigger 不得计入 option+amd 计数')
+  mini.unmount()
+})
+
 await test('ledger 探针读得出优先级占位，且成功后立刻撤销（不留残余条目）', () => {
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
   const diag = mounted.settings.spec.inject().diag
@@ -1517,7 +1569,11 @@ await test('ledger 探针读得出优先级占位，且成功后立刻撤销（�
   mini.unmount()
 })
 
-await test('渲染早期抛错时计数已自增（0 次 ⇒ 真的是从没被调用）', () => {
+await test('渲染期只读：渲染抛错时不得改动 DIAG（P3，计数改由 effect 承担）', () => {
+  // 旧实现在渲染第一行自增计数，好处是「调用了但提前抛错」也能计数；
+  // 代价是 React 并发渲染丢弃/重放会让计数本身失真（M5-RENDER-CHURN.md §4）。
+  // P3 之后计数只发生在 commit 后的 effect 里，因此这里的正确不变量是：
+  // 渲染抛错 ⇒ 计数不动（该场景由宿主 SlotErrorBoundary + console.error 兜底）。
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
   const diag = mounted.settings.spec.inject().diag
   const before = diag.rowRenders
@@ -1527,6 +1583,7 @@ await test('渲染早期抛错时计数已自增（0 次 ⇒ 真的是从没被�
     },
     subscribe: () => () => {},
   }
+  let threw = false
   try {
     mounted.modelRow.Component({
       provider: { id: 'amd', name: 'AMD' },
@@ -1536,13 +1593,10 @@ await test('渲染早期抛错时计数已自增（0 次 ⇒ 真的是从没被�
       store: boomStore,
     })
   } catch {
-    /* 预期在 useSnapshot 处抛错；关键断言在下面。 */
+    threw = true
   }
-  assert.equal(
-    diag.rowRenders,
-    before + 1,
-    '计数必须在 useSnapshot 之前完成，否则「提前抛错」会被误读成「没被调用」',
-  )
+  assert.equal(threw, true, 'useSnapshot 抛错应向上抛，由宿主 SlotErrorBoundary 接管')
+  assert.equal(diag.rowRenders, before, '渲染期不得写 DIAG：计数只发生在 effect 里')
 })
 await test('注册后上报的 ledger 实况读得出「席位 0 条 / 本格 1 条且 winner 是我们」', () => {
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
