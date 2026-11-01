@@ -214,3 +214,20 @@ code until a restart"），因此「重启后 30 分钟内 `grep -c 'amd-model-l
 
 心跳在单测里不会执行（`test/client.test.mjs` 把 `setInterval` 桩成不保存回调），因此该改动
 不影响既有断言；四套件复跑仍为 184 全绿（client 78 / catalog 50 / load-source 32 / host 24）。
+
+### 8.2 功能未回归 + 新心跳间隔的真机交叉确认（2026-11-01T10:42:41Z 启动，载入 410d4b4）
+
+用户目视确认「AMD 行仍是 ● x%、DeepSeek-V4.1-Flash 行仍带 1017」后，从同一实例的心跳取到决定性数据：
+
+| 心跳时间（UTC） | rowRenders | rowOptionAmdRenders | rendersPerSec | rendersPerSecPeak | rowLastSeen.placement |
+|---|---|---|---|---|---|
+| 10:44:43（启动后 2 分钟） | 5 | 0 | 0.04 | 0.13 | trigger |
+| 10:46:43（展开菜单之后） | 8 618 | **1 694** | 71.78 | **128.83** | trigger |
+
+三条结论：
+
+1. **徽章功能未回归**：`rowOptionAmdRenders` 由 0 变 1 694，说明「placement=option 且 provider=amd」的分支被真实调用了 1 694 次 —— 与用户目视「● x%、1017 都在」完全一致。`badgeView` 缓存没有破坏渲染路径。
+2. **新心跳节奏已生效**：该实例 4 分钟内只产生 2 条心跳（120 秒一条），30 秒采样在内部保留，`rendersPerSecPeak` 128.83 命中流式尖峰，而平均值 71.78 —— 尖峰没有被 2 分钟平均抹掉。
+3. **日志量**：该实例 4 分钟共 58 行，其中插件 19 行；按 30 分钟外推 ≈ 34 行（心跳 15 + render 阶梯 ≤7 + 启动期 12），落在任务书 ≤60 的预算内。
+
+对照第 1 个实例（09:41:58 启动、旧代码）：24 分钟 3 843 行、心跳 72 条、`rowRenders` 涨到 24 955（`optionAmd` 峰值 2 408）。
