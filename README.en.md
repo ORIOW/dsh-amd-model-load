@@ -41,7 +41,7 @@ After that, `Settings → AMD 模型负载` should show the card and the log sho
 
 ### Option 2 — plugin page
 
-Use `Plugins → Add plugin` and enter the local path or repository URL. This route is **not verified yet**; prefer Option 1 if anything misbehaves.
+Use `Plugins → Add plugin` and enter the package name `dsh-amd-model-load` (installable once it is published to npm), or the local path / repository URL. This route is **not verified yet**; prefer Option 1 if anything misbehaves.
 
 ### Verifying the install
 
