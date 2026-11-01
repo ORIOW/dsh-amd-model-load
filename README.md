@@ -91,7 +91,7 @@ tail -f "/Users/dengjiawei/Library/Logs/DSH Desktop/harness.log" | grep amd-mode
 - 依赖 AMD 的公开接口，对方改版就会失效；`load` 端点单次响应约 26 秒，首次出数是慢的，属正常。
 - 与 `dsh-reasoning-effort` **0.8.1 及更早**同装时，模型列表的徽章不会显示：那个版本以 `priority: -100` 整个替换了 composer 的模型选择器，且从不渲染 `conversation.input.model.label` 子 slot，连官方 `1017` 徽章也会一起消失。**0.9.0 起上游改成「包裹原生组件」，已修好**。排查过程见 [M4-UPSTREAM-FINDING.md](M4-UPSTREAM-FINDING.md)。
 - **收起态的模型行（`placement: "trigger"`）会随流式输出被宿主父组件频繁重渲染**（实测空闲 ~8 次/秒、流式期间 105–129 次/秒）。本插件在这条路径上只做一次 O(1) 缓存查找、渲染期不写任何副作用，日志也不再按次上报；该重渲染属宿主行为，不在本插件修复范围。分析与测法见 [M5-RENDER-CHURN.md](M5-RENDER-CHURN.md)。
-- 当前 `lib/client.js` 里仍带一层临时诊断设施（`reportDiag` / `probeLedger` / 30 秒 heartbeat / 设置卡底部诊断行），用于定位上述问题；真机确认后会摘除。它们不影响徽章逻辑，但会往宿主日志写 `client-diag` 行。
+- 定位上述两个问题期间曾临时带一层诊断设施（`reportDiag` / `probeLedger` / heartbeat / 设置卡诊断行）。**v0.1.1 已全部摘除**：发布版不再向宿主日志写 `client-diag`，也不再持有任何诊断定时器；保留的只有注册失败时的一条 `console.error`（带 `[amd-model-load]` 前缀，只进浏览器 console）。
 
 ## 开发
 
@@ -100,7 +100,7 @@ tail -f "/Users/dengjiawei/Library/Logs/DSH Desktop/harness.log" | grep amd-mode
 ```sh
 node test/load-source.test.mjs   # 32 用例：归一化、过期判定、轮询器
 node test/catalog.test.mjs       # 50 用例：目录解析、五分类分组、排序
-node test/client.test.mjs        # 78 用例：两个 slot 的注册与渲染分支
+node test/client.test.mjs        # 72 用例：两个 slot 的注册与渲染分支
 bash test/with-stub.sh           # 24 用例：host 半身（临时建 schemastery 桩，退出即删）
 ```
 

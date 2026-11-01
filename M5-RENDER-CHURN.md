@@ -231,3 +231,31 @@ code until a restart"），因此「重启后 30 分钟内 `grep -c 'amd-model-l
 3. **日志量**：该实例 4 分钟共 58 行，其中插件 19 行；按 30 分钟外推 ≈ 34 行（心跳 15 + render 阶梯 ≤7 + 启动期 12），落在任务书 ≤60 的预算内。
 
 对照第 1 个实例（09:41:58 启动、旧代码）：24 分钟 3 843 行、心跳 72 条、`rowRenders` 涨到 24 955（`optionAmd` 峰值 2 408）。
+
+---
+
+## 9. 收尾：v0.1.1 摘除诊断层（2026-11-01）
+
+降噪的目标达成后，诊断设施本身的存在就是最后一笔日志预算。v0.1.1 把它们整层删掉，而不是留一个「诊断模式开关」：插件是别人机器上的客人，多一个可配置的日志放大开关，就等于多一条将来把宿主日志刷掉的路。
+
+**删除清单**（`lib/client.js` 1342 → 934 行）：
+
+| 删除项 | 原用途 |
+|---|---|
+| `reportDiag()` | 把客户端诊断经 RPC 送回 host，落进 `harness.log` |
+| `probeLedger()` | 用同 priority 重复注册读出「谁占了哪个 priority」 |
+| `describeSlot()` / `ledgerDigest()` | 直接读宿主 ledger 的条目数与 winner |
+| 30 秒采样 / 2 分钟上报的 heartbeat | 渲染速率与 store emit 数的常态观测 |
+| 设置卡底部诊断行（`renderDiagLine()`） | 不开 DevTools 也能读到的诊断文本 |
+| `DIAG` 模块级对象、`store.emits()`、`shouldReportRender()` 与 10 的幂刻度 | 支撑上述五项的计数器 |
+| `lib/index.js` 的 `diag` RPC 端点 | host 侧 `console.log` 落盘 |
+
+**保留清单**（有真实价值，不是诊断）：
+
+- `safeRegister()`：注册失败仍 `console.error` 并返回空 disposer，不再走 `queueMicrotask` 的静默路径；成功路径下的两条 `console.log` 只在启动时各打一次，只进浏览器 console，不写 `harness.log`。
+- `ModelRowBadge` 的 option+amd 分支 `try/catch`：任何意外降级为纯模型名，避免宿主 `SlotErrorBoundary` 把条目 abdicate 掉。
+- `badgeView()` 的「快照引用 + model.id」缓存：抖动仍在（属宿主父组件），缓存让这条路径保持 O(1)。
+
+**验收**：四套件 **178 全绿**（client 72 / catalog 50 / load-source 32 / host 24）。新增两条用例专门守这条边界 —— 「发布版不含诊断层：设置卡只注入 store，且不再额外起定时器」（断言 apply 期间定时器增量为 0、首个订阅者只启动 store 那一个节拍）与「useSnapshot 抛错时向上抛，不吞错」。删除 9 条断言诊断上报 / ledger 探针 / DIAG 计数的用例。
+
+**为什么不再保留「诊断模式」**：M4 的教训不是「诊断无用」，而是「诊断必须默认静默」。真正的可观测性来自 `console.error` 的单行失败信息 + 设置卡上的「更新于 HH:MM / 陈旧」标记 + 心跳之外的业务日志（`load ok: N models` / `catalog ok: N models`），这些都不随渲染次数增长。

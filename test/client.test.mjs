@@ -233,24 +233,8 @@ function mount(plugin, rpc, options = {}) {
   mini.reset()
   const registered = []
   const slotsInjected = []
-  // 诊断上报（method === 'diag'）单独收在这里：它不参与「拉取次数」计数，
-  // 否则每个注入 diag 的用例都要改自己的 rpc 桩。
-  const diagReports = []
-  const wrappedRpc =
-    rpc === undefined
-      ? undefined
-      : {
-          ...rpc,
-          call(channel, method, payload) {
-            if (method === 'diag') {
-              diagReports.push({ channel, payload })
-              return Promise.resolve({ ok: true, value: { logged: true } })
-            }
-            return rpc.call(channel, method, payload)
-          },
-        }
   const ctx = {
-    connection: rpc === undefined ? undefined : { rpc: wrappedRpc },
+    connection: rpc === undefined ? undefined : { rpc },
     slots: {
       inject(name, cb) {
         slotsInjected.push(name)
@@ -261,7 +245,7 @@ function mount(plugin, rpc, options = {}) {
           throw new Error(`single slot "${spec.name}" already has a registration at priority ${spec.priority ?? 0} — register at a different priority to shadow it (lowest renders)`)
         }
         // 与宿主同语义：single slot 同 priority 只能有一个占位者。
-        // 这也让 ledger 探针（同 priority 重复注册）在桩里同样抛错。
+        // 同 priority 的第二条注册必须抛错（与宿主一致）。
         const conflict = registered.some(
           (entry) => entry.spec.name === spec.name && (entry.spec.priority ?? 0) === (spec.priority ?? 0),
         )
@@ -281,7 +265,7 @@ function mount(plugin, rpc, options = {}) {
       // 与宿主同语义的只读视图：entries = 原始条目表（含被 shadow 的），
       // entriesOfSlot = 每个 cell 的 winner（single 只有一个 cell ⇒ 只给 priority 最小的那条）。
       // 形状必须与宿主一致：条目对外暴露的是 `options`（即 register 的 spec），
-      // 不是 `spec` —— 诊断代码按 `entry.options.priority / .id` 读，形状错了会静默读到 '?'。
+      // 不是 `spec` —— 与宿主保持同形状，避免用例依赖到错误的对象结构。
       entries(name) {
         return registered.filter((entry) => entry.spec.name === name).map((entry) => ({ options: entry.spec }))
       },
@@ -298,7 +282,6 @@ function mount(plugin, rpc, options = {}) {
   return {
     registered,
     slotsInjected,
-    diagReports,
     bySlot,
     settings: bySlot('settings.section'),
     modelRow: bySlot('conversation.input.model.label'),
@@ -1385,58 +1368,7 @@ await test('apply 入口与每次 register 都打统一前缀的日志（不再�
   )
 })
 
-await test('设置卡 inject 携带 diag，卡片渲染出「已注册」诊断行', async () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  const injected = mounted.settings.spec.inject()
-  assert.ok(injected.diag !== undefined && injected.diag !== null, 'inject 应携带 diag')
-  assert.equal(
-    injected.diag.registers['conversation.input.model.label'].ok,
-    true,
-    'apply 成功后模型行注册状态应为 ok',
-  )
-  const tree = await mini.render(mounted.settings.Component, injected)
-  const text = textOf(tree)
-  assert.ok(text.includes('诊断：模型行徽章 已注册'), `应渲染诊断行，实际：${text}`)
-  assert.ok(text.includes('行组件已渲染'), '诊断行应带渲染计数')
-  mini.unmount()
-})
-
-await test('行组件每次渲染计入 DIAG（总次数 / option+amd 次数 / lastSeen 分支）', async () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
-  const diag = mounted.settings.spec.inject().diag
-  const beforeTotal = diag.rowRenders
-  const beforeAmd = diag.rowOptionAmdRenders
-
-  await mini.render(mounted.modelRow.Component, {
-    provider: { id: 'amd', name: 'AMD' },
-    model: { id: 'Qwen3.8-27B', name: 'Qwen3.8-27B' },
-    placement: 'option',
-    selected: false,
-    ...mounted.modelRow.spec.inject(),
-  })
-  // 微型渲染器在 effect 推送快照后会重渲染，一次 render 可能计多次；
-  // 断言用增量方向而不是精确值。
-  assert.ok(diag.rowRenders > beforeTotal, '总渲染计数应增加')
-  assert.ok(diag.rowOptionAmdRenders > beforeAmd, 'option+amd 计数应增加')
-  assert.equal(diag.rowLastSeen.branch, 'option+amd', 'lastSeen 应记录命中分支')
-
-  // 非 AMD provider：总计数继续增加，option+amd 计数不动
-  const afterAmd = diag.rowOptionAmdRenders
-  await mini.render(mounted.modelRow.Component, {
-    provider: { id: 'tencent', name: '腾讯云' },
-    model: { id: 'hunyuan', name: 'Hunyuan' },
-    placement: 'option',
-    selected: false,
-    ...mounted.modelRow.spec.inject(),
-  })
-  assert.ok(diag.rowRenders > beforeTotal + 1, '总渲染计数应再增加')
-  assert.equal(diag.rowOptionAmdRenders, afterAmd, '非 amd 不应进 option+amd 计数')
-  assert.equal(diag.rowLastSeen.branch, 'bare-name', 'lastSeen 应记录 bare-name 分支')
-  assert.equal(diag.rowLastSeen.providerId, 'tencent', 'lastSeen 应记录实际看到的 provider.id')
-  mini.unmount()
-})
-
-await test('register 抛错时 apply 不再向上抛，DIAG 记录失败并 console.error（防静默）', () => {
+await test('register 抛错时 apply 不再向上抛，且 console.error 带统一前缀（防静默）', () => {
   const captured = captureConsole()
   let threw = null
   try {
@@ -1454,9 +1386,26 @@ await test('register 抛错时 apply 不再向上抛，DIAG 记录失败并 cons
     captured.errorCalls.some((line) => line.includes('[amd-model-load]') && line.includes('conversation.input.model.label')),
     `register 失败应 console.error 带统一前缀，实际：${JSON.stringify(captured.errorCalls)}`,
   )
-  // 重新成功挂载一次，把 DIAG 的注册状态恢复成 ok，避免影响后续用例
-  mount(plugin, { call: async () => ({ ok: true, value: null }) })
 })
+
+await test('发布版不含诊断层：设置卡只注入 store，且不再额外起定时器', async () => {
+  const createdBefore = timers.created
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
+  const injected = mounted.settings.spec.inject()
+  assert.deepEqual(Object.keys(injected), ['store'], '设置卡 inject 只应提供 store')
+  assert.equal(mounted.registered.length, 2, '仍应注册两个挂载点')
+  // 诊断心跳（每 30 秒一条）若还在，apply 期间就会多出一个 interval。
+  // 现在 apply 只建 store、不起表 —— store 的节拍在**首个订阅者**出现时才启动。
+  assert.equal(timers.created - createdBefore, 0, 'apply 期间不应创建任何定时器')
+
+  // 渲染设置卡（= 首个订阅者）后才允许出现唯一的那一个定时器。
+  const beforeRender = timers.created
+  await mini.render(mounted.settings.Component, injected)
+  assert.equal(timers.created - beforeRender, 1, '首个订阅者应只启动 store 的一个节拍')
+  mini.unmount()
+  mini.unmount()
+})
+
 
 await test('option+amd 分支抛错时降级为纯模型名（防宿主 abdicate 让徽章时有时无）', async () => {
   // 造一份「访问 groups 属性即抛错」的快照数据：模拟任何意外脏数据。
@@ -1497,51 +1446,8 @@ await test('option+amd 分支抛错时降级为纯模型名（防宿主 abdicate
   )
 })
 
-await test('apply / register 各上报一条 diag（宿主日志可 headless 判读）', () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  const stages = mounted.diagReports.map((entry) => entry.payload && entry.payload.stage)
-  assert.ok(stages.includes('apply'), '应有 apply 上报')
-  const registerReports = mounted.diagReports.filter(
-    (entry) => entry.payload && entry.payload.stage === 'register',
-  )
-  assert.equal(registerReports.length, 2, '两个 slot 各应上报一次注册结果')
-  assert.ok(
-    registerReports.every((entry) => entry.payload.ok === true),
-    '两次注册都应报成功',
-  )
-  assert.ok(
-    mounted.diagReports.every((entry) => entry.channel === '/dsh-amd-model-load'),
-    '诊断必须与业务共用同一个通道前缀（host 只有一个 handler）',
-  )
-  mini.unmount()
-})
-
-await test('渲染上报走阶梯：5000 次提交最多 12 条 render diag（防日志洪水）', async () => {
+await test('trigger 布局只输出纯模型名（收起按钮不显示负载，也不显示 1017）', async () => {
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
-  const props = {
-    provider: { id: 'amd', name: 'AMD' },
-    model: { id: 'Qwen3.8-27B', name: 'Qwen3.8-27B' },
-    placement: 'option',
-    selected: false,
-    ...mounted.modelRow.spec.inject(),
-  }
-  const countRenderReports = () =>
-    mounted.diagReports.filter((entry) => entry.payload && entry.payload.stage === 'render').length
-  const before = countRenderReports()
-  for (let i = 0; i < 5000; i += 1) {
-    await mini.render(mounted.modelRow.Component, props)
-  }
-  const reports = countRenderReports() - before
-  // 旧实现「每 25 次一条」在 5000 次渲染时会发 200 条；真机 25 分钟产生 2 231 条，
-  // 占了 harness.log 的 86%。阶梯后 5000 次只有 10/100/1000 三个刻度。
-  assert.ok(reports <= 12, `5000 次渲染最多 12 条 render 上报，实际 ${reports}`)
-  assert.ok(reports >= 1, '至少要留下刻度记录，否则观测能力被删没了')
-})
-
-await test('trigger 布局只输出纯模型名，且 effect 仍记下本次布局（P3 后观测不丢）', async () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
-  const diag = mounted.settings.spec.inject().diag
-  const beforeAmd = diag.rowOptionAmdRenders
   const tree = await mini.render(mounted.modelRow.Component, {
     provider: { id: 'apigoto', name: 'API' },
     model: { id: 'deepseek-flash', name: 'DeepSeek-V4.1-Flash' },
@@ -1549,34 +1455,14 @@ await test('trigger 布局只输出纯模型名，且 effect 仍记下本次布�
     selected: true,
     ...mounted.modelRow.spec.inject(),
   })
-  // trigger 是收起状态的按钮：只出模型名（连 1017 徽章都不出，那是 option 行才有的）。
+  // trigger 是收起状态的按钮：只出模型名（1017 只在 option 行代渲染）。
   assert.equal(tree, 'DeepSeek-V4.1-Flash', `trigger 应只返回纯模型名，实际：${JSON.stringify(tree)}`)
-  assert.equal(diag.rowLastSeen.placement, 'trigger', 'effect 应记下本次布局，否则 P3 之后观测丢失')
-  assert.equal(diag.rowOptionAmdRenders, beforeAmd, 'trigger 不得计入 option+amd 计数')
   mini.unmount()
 })
 
-await test('ledger 探针读得出优先级占位，且成功后立刻撤销（不留残余条目）', () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  const diag = mounted.settings.spec.inject().diag
-  assert.equal(diag.probes['-1'].threw, true, '-1 位已被我们占用，同 priority 探针必须抛错')
-  assert.ok(
-    diag.probes['-1'].message.includes('priority -1'),
-    `错误原文应含 priority -1，实际：${diag.probes['-1'].message}`,
-  )
-  assert.equal(diag.probes['0'].threw, false, '桩里没有内置 1017，0 位应空闲')
-  assert.equal(mounted.registered.length, 2, '探针注册成功后必须立刻撤销，条目数仍为 2')
-  mini.unmount()
-})
 
-await test('渲染期只读：渲染抛错时不得改动 DIAG（P3，计数改由 effect 承担）', () => {
-  // 旧实现在渲染第一行自增计数，好处是「调用了但提前抛错」也能计数；
-  // 代价是 React 并发渲染丢弃/重放会让计数本身失真（M5-RENDER-CHURN.md §4）。
-  // P3 之后计数只发生在 commit 后的 effect 里，因此这里的正确不变量是：
-  // 渲染抛错 ⇒ 计数不动（该场景由宿主 SlotErrorBoundary + console.error 兜底）。
+await test('useSnapshot 抛错时向上抛，不吞错（由宿主 SlotErrorBoundary 接管）', () => {
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  const diag = mounted.settings.spec.inject().diag
-  const before = diag.rowRenders
   const boomStore = {
     getSnapshot() {
       throw new Error('boom')
@@ -1595,49 +1481,7 @@ await test('渲染期只读：渲染抛错时不得改动 DIAG（P3，计数改�
   } catch {
     threw = true
   }
-  assert.equal(threw, true, 'useSnapshot 抛错应向上抛，由宿主 SlotErrorBoundary 接管')
-  assert.equal(diag.rowRenders, before, '渲染期不得写 DIAG：计数只发生在 effect 里')
-})
-await test('注册后上报的 ledger 实况读得出「席位 0 条 / 本格 1 条且 winner 是我们」', () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  const ledgerReport = mounted.diagReports.filter((entry) => entry.payload && entry.payload.stage === 'ledger').pop()
-  assert.ok(ledgerReport, '注册完成后应上报一次 ledger 实况')
-  assert.equal(ledgerReport.payload.label.entries, 1, '本格应只有我们这一条注册')
-  assert.equal(ledgerReport.payload.label.winners, 1, 'single slot 只应有一个 winner')
-  // 插件代码跑在 vm 上下文里，数组跨 realm ⇒ deepEqual 会报「结构相同但引用不等」。
-  // 用 join 比较，与 realm 无关。
-  assert.equal(ledgerReport.payload.label.winnerIds.join(','), 'dsh-amd-model-load.modelrow')
-  assert.equal(ledgerReport.payload.label.winnerPriorities.join(','), '-1')
-  assert.equal(
-    ledgerReport.payload.seat.entries,
-    0,
-    '桩里没人注册席位 ⇒ 这正是「父级没渲染、label 永不被调用」的诊断信号',
-  )
-  mini.unmount()
-})
-
-await test('设置卡渲染时重读 ledger 并上报（打开设置页即可取证，节流 5 秒）', async () => {
-  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  const injected = mounted.settings.spec.inject()
-  // DIAG 是模块级单例：前面的用例可能刚渲染过卡片，节流窗口未过。测试里显式清零。
-  injected.diag.cardReportTs = 0
-  await mini.render(mounted.settings.Component, injected)
-  const cardReports = mounted.diagReports.filter((entry) => entry.payload && entry.payload.stage === 'card')
-  assert.equal(cardReports.length, 1, '首次渲染应上报一条 card 诊断')
-  assert.equal(cardReports[0].payload.label.entries, 1)
-  assert.equal(cardReports[0].payload.label.winnerIds.join(','), 'dsh-amd-model-load.modelrow')
-  // 立即再渲染一次：节流生效，不应追加第二条。
-  await mini.render(mounted.settings.Component, injected)
-  assert.equal(
-    mounted.diagReports.filter((entry) => entry.payload && entry.payload.stage === 'card').length,
-    1,
-    '5 秒内重复渲染不应重复上报',
-  )
-  // 诊断行要能直接读出 ledger 数字（不开 DevTools 也能判读）。
-  const tree = await mini.render(mounted.settings.Component, injected)
-  const text = textOf(tree)
-  assert.ok(text.includes('本格=1'), `诊断行应含本格条目数，实际：${text}`)
-  mini.unmount()
+  assert.equal(threw, true, '渲染期异常不应被渲染函数吞掉：宿主负责 abdicate 与兜底')
 })
 
 //#endregion

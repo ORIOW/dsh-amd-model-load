@@ -1,6 +1,6 @@
 {
   "name": "dsh-amd-model-load",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "在 DeepSeek Harness 里给 AMD Radeon TokenFactory 的免费模型显示实时负载徽章：设置页按五类分组 + 模型选择列表逐行显示状态点与百分比。",

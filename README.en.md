@@ -90,7 +90,7 @@ Models are matched by the full id with the `model_gateway:` prefix stripped. Nev
 - It depends on AMD's public endpoints, so an upstream change breaks it. The first load takes ~26 seconds — that is the endpoint, not the plugin.
 - If `dsh-reasoning-effort` **0.8.1 or earlier** is installed, the model-list badges will not appear: that version replaced the composer's model selector outright at `priority: -100` and never renders the `conversation.input.model.label` child slot, so even the official `1017` badge disappears. **Upstream fixed this in 0.9.0 by wrapping the native component.** The investigation is written up in [M4-UPSTREAM-FINDING.md](M4-UPSTREAM-FINDING.md).
 - **The collapsed model row (`placement: "trigger"`) is re-rendered very frequently by the host parent during streaming** (measured: ~8/s idle, 105–129/s while streaming). On that path this plugin only does one O(1) cached lookup and writes nothing during render; diagnostics are no longer reported per render either. The churn itself is host behaviour and out of scope here — see [M5-RENDER-CHURN.md](M5-RENDER-CHURN.md).
-- `lib/client.js` currently still carries a temporary diagnostic layer (`reportDiag`, `probeLedger`, a 30-second heartbeat, a diagnostic line at the bottom of the settings card) used to chase the issue above. It will be removed once the fix is confirmed on a real machine. It does not affect badge logic, but it does write `client-diag` lines into the host log.
+- While chasing the two issues above a temporary diagnostic layer was carried (`reportDiag`, `probeLedger`, a heartbeat, a diagnostic line on the settings card). **v0.1.1 removed all of it**: the release no longer writes `client-diag` lines into the host log and holds no diagnostic timers. What remains is a single `console.error` when a slot registration fails, prefixed with `[amd-model-load]` and visible only in the browser console.
 
 ## Development
 
@@ -99,7 +99,7 @@ No build step, plain ESM. Tests use Node's built-in runner:
 ```sh
 node test/load-source.test.mjs   # 32 cases: normalisation, staleness, poller
 node test/catalog.test.mjs       # 50 cases: catalog parsing, grouping, sorting
-node test/client.test.mjs        # 78 cases: both slots, every render branch
+node test/client.test.mjs        # 72 cases: both slots, every render branch
 bash test/with-stub.sh           # 24 cases: host half (stubs schemastery, cleans up on exit)
 ```
 
