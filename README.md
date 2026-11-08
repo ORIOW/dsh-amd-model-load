@@ -10,6 +10,47 @@
 
 ---
 
+**目录**：[快速开始](#快速开始) · [界面预览](#界面预览) · [功能](#功能) · [安装](#安装) · [配置](#配置) · [数据来源](#数据来源) · [已知限制](#已知限制) · [开发](#开发) · [许可证](#许可证)
+
+## 快速开始
+
+前置：DSH Desktop 0.12.1 或更新（内嵌 dsh 0.2.1-rc.2），本机已装 `pnpm`。
+
+```sh
+git clone https://github.com/ORIOW/dsh-amd-model-load.git
+```
+
+打开当前 profile 的 `package.json`（Desktop 默认在
+`~/Library/Application Support/dsh-desktop/harness/profiles/web/package.json`），在 `dependencies` 里加一行：
+
+```json
+"dsh-amd-model-load": "link:/absolute/path/to/dsh-amd-model-load"
+```
+
+在同一个目录跑 `pnpm install`，然后**重启 DSH Desktop**。重启后 `设置 → AMD 模型负载` 出现卡片即为装好；日志怎么核对见[校验安装](#校验安装)。
+
+## 界面预览
+
+下面是**文字示意，不是截图**——真实界面由 DSH 主题决定，颜色与间距随主题变化：
+
+```text
+设置 → AMD 模型负载
+  VLM (Vision)                                   ← 组标题原样取上游 capability_label
+    ● MiMo-V2.6-Flash      FREE   空闲    20.1%   ← 组内按繁忙度升序，空闲在前
+    ● MiniCPM-V-4.7-1B     FREE   繁忙    61.8%
+  LLM (Text)
+    ● DeepSeek-V4.1-Flash-1017 FREE 空闲    5.7%
+    ● GLM-5.3-Flash        FREE   繁忙    33.2%
+  OCR (Document)
+    ● MinerU2.5-Pro        FREE   空闲    12.4%
+
+模型选择列表
+  DeepSeek-V4.1-Flash-1017   ● 5.7%               ← 本插件追加，紧跟官方 1017 徽章
+  GLM-5.3-Flash              ● 33.2%
+```
+
+一行读数的固定顺序是「状态点 → 模型 id → FREE 徽章 → 状态文字 → 百分比」；没有负载数据的行整行降到 55% 不透明度，右侧显示 `—` 而不是编造一个数字。
+
 ## 功能
 
 | 挂载点 | 效果 |
@@ -41,7 +82,9 @@
 
 ### 方式二：插件页添加
 
-在产品界面 `插件 → 添加插件` 里填包名 `dsh-amd-model-load`（该包已发布到 npm 时可直接装），或本地路径 / 仓库地址。这条路径**尚未实测**，遇到问题请优先用方式一。
+在 `插件 → 添加插件` 里填本地路径或仓库地址。这条路径**尚未实测**，遇到问题请优先用方式一。
+
+> ⚠️ 本插件**尚未发布到 npm**（截至 v0.1.1），填包名 `dsh-amd-model-load` 是装不上的。
 
 ### 校验安装
 

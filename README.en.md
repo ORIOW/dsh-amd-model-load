@@ -10,6 +10,47 @@ Every row of the model selector gets a status dot plus a percentage — `● 20.
 
 ---
 
+**Contents:** [Quick start](#quick-start) · [Preview](#preview) · [What it does](#what-it-does) · [Installation](#installation) · [Configuration](#configuration) · [Data sources](#data-sources) · [Known limitations](#known-limitations) · [Development](#development) · [License](#license)
+
+## Quick start
+
+Requires DSH Desktop 0.12.1 or newer (which embeds dsh 0.2.1-rc.2) and `pnpm` on your machine.
+
+```sh
+git clone https://github.com/ORIOW/dsh-amd-model-load.git
+```
+
+Open the active profile's `package.json` (on Desktop usually
+`~/Library/Application Support/dsh-desktop/harness/profiles/web/package.json`) and add to `dependencies`:
+
+```json
+"dsh-amd-model-load": "link:/absolute/path/to/dsh-amd-model-load"
+```
+
+Run `pnpm install` in that same directory, then **restart DSH Desktop**. If `Settings → AMD 模型负载` shows the card afterwards, you are done; see [Verifying the install](#verifying-the-install) for the log check.
+
+## Preview
+
+This is a **text sketch, not a screenshot** — the real UI follows your DSH theme, so colours and spacing vary:
+
+```text
+Settings → AMD 模型负载
+  VLM (Vision)                                   ← group title is the upstream capability_label, verbatim
+    ● MiMo-V2.6-Flash      FREE   idle    20.1%   ← sorted by activity inside the group, idlest first
+    ● MiniCPM-V-4.7-1B     FREE   busy    61.8%
+  LLM (Text)
+    ● DeepSeek-V4.1-Flash-1017 FREE idle    5.7%
+    ● GLM-5.3-Flash        FREE   busy    33.2%
+  OCR (Document)
+    ● MinerU2.5-Pro        FREE   idle    12.4%
+
+Model selector
+  DeepSeek-V4.1-Flash-1017   ● 5.7%               ← added by this plugin, right after the official 1017 badge
+  GLM-5.3-Flash              ● 33.2%
+```
+
+A row always reads "status dot → model id → FREE badge → state text → percentage". Rows without load data drop to 55% opacity and show `—` on the right instead of inventing a number.
+
 ## What it does
 
 | Mount point | Effect |
@@ -41,7 +82,9 @@ After that, `Settings → AMD 模型负载` should show the card and the log sho
 
 ### Option 2 — plugin page
 
-Use `Plugins → Add plugin` and enter the package name `dsh-amd-model-load` (installable once it is published to npm), or the local path / repository URL. This route is **not verified yet**; prefer Option 1 if anything misbehaves.
+Use `Plugins → Add plugin` with a local path or a repository URL. This route is **not verified yet**; prefer Option 1 if anything misbehaves.
+
+> ⚠️ The plugin is **not published to npm** as of v0.1.1, so entering the package name `dsh-amd-model-load` will not install anything.
 
 ### Verifying the install
 
