@@ -1138,7 +1138,7 @@ await test('AMD 模型不会被误加 1017 徽章', async () => {
 })
 
 
-await test('有负载数据 → 状态点颜色跟随 state', async () => {
+await test('有负载数据 → 状态点形状与颜色跟随 state（busy：半填充 + 同色环，accent #b45309）', async () => {
   const value = catalogValue({
     groups: [
       {
@@ -1153,32 +1153,47 @@ await test('有负载数据 → 状态点颜色跟随 state', async () => {
   assert.ok(text.includes('55.0%'), `实际：${text}`)
   const dots = statusDots(nodes)
   assert.equal(dots.length, 1)
-  assert.equal(dots[0].props.style.background, '#eab308', 'busy 应是黄点')
+  const dot = dots[0].props.style
+  // M5 起 busy 是「下半着色渐变 + 同色细环」的半填充圆，颜色经 color-mix 与主题文字色混合，
+  // accent 从亮黄 #eab308 压暗为 #b45309（原「solid 黄点」断言按新形态改写，意图不变：颜色跟随 state）。
+  assert.ok(String(dot.background).startsWith('linear-gradient(to top,'), `busy 应是半填充渐变，实际：${dot.background}`)
+  assert.ok(String(dot.background).includes('#b45309'), `busy 渐变应含 accent #b45309，实际：${dot.background}`)
+  assert.ok(String(dot.boxShadow).includes('inset 0 0 0 1px'), 'busy 应有 1px 同色环')
+  assert.ok(String(dot.boxShadow).includes('#b45309'), `环色应含 accent，实际：${dot.boxShadow}`)
 })
 
-await test('查不到该模型 → 灰点 + 「—」', async () => {
+await test('查不到该模型 → 虚线环点（不填色）+ 「—」', async () => {
   const { nodes, text } = await renderModelRow(plugin, mini, { ok: true, value: catalogValue() }, {
     model: { id: 'Not-In-Catalog', name: 'Not In Catalog' },
   })
   assert.ok(text.includes('Not In Catalog'), '模型名仍要显示')
   assert.ok(text.includes('—'), `应显示破折号，实际：${text}`)
-  assert.equal(statusDots(nodes)[0].props.style.background, '#9ca3af', '应是灰点')
+  const dot = statusDots(nodes)[0].props.style
+  // M5 起「无数据」是形状编码：透明底 + 1px dashed 虚线环（原「灰点 #9ca3af」断言按新形态改写，意图不变：无数据可辨）。
+  assert.equal(dot.background, 'transparent', '无数据点不填色')
+  assert.ok(String(dot.border).includes('dashed'), `应是虚线环，实际：${dot.border}`)
+  assert.ok(String(dot.border).includes('#6b7280'), `环色应来自 unknown accent #6b7280，实际：${dot.border}`)
 })
 
-await test('查到了但 hasLoad 为 false → 灰点 + 「—」', async () => {
+await test('查到了但 hasLoad 为 false → 虚线环点 + 「—」', async () => {
   // catalogValue 里 MiniCPM-V-4.7-1B 是 hasLoad:false, utilization:null
   const { nodes, text } = await renderModelRow(plugin, mini, { ok: true, value: catalogValue() }, {
     model: { id: 'MiniCPM-V-4.7-1B', name: 'MiniCPM-V-4.7-1B' },
   })
   assert.ok(text.includes('—'), `应显示破折号，实际：${text}`)
-  assert.equal(statusDots(nodes)[0].props.style.background, '#9ca3af')
+  const dot = statusDots(nodes)[0].props.style
+  assert.equal(dot.background, 'transparent', '无数据点不填色')
+  assert.ok(String(dot.border).includes('dashed'), '应是虚线环')
 })
 
 await test('rpc 失败 / 抛异常 → 灰点 + 「—」，模型名仍可见', async () => {
   const failed = await renderModelRow(plugin, mini, { ok: false, error: { code: 'internal', message: 'boom' } })
   assert.ok(failed.text.includes('Qwen3.8-27B'), '模型名仍要显示')
   assert.ok(failed.text.includes('—'))
-  assert.equal(statusDots(failed.nodes)[0].props.style.background, '#9ca3af')
+  const failedDot = statusDots(failed.nodes)[0].props.style
+  // M5 起无数据 = 透明底虚线环（原「灰点 #9ca3af」断言按新形态改写，意图不变）。
+  assert.equal(failedDot.background, 'transparent')
+  assert.ok(String(failedDot.border).includes('dashed'))
 
   const mounted = mount(plugin, {
     call: async () => {
@@ -1225,20 +1240,46 @@ await test('徽章不显示「更新于」（只在 title 里）', async () => {
   assert.ok(!text.includes('更新于'), `正文不应出现「更新于」，实际：${text}`)
 })
 
-await test('样式：inline-flex + marginLeft + nowrap + tabular-nums，且不设固定宽度', async () => {
+await test('样式：18px 胶囊 chip（inline-flex + inset 描边 + nowrap），不设固定宽度；文本 11px/600/tabular-nums', async () => {
   const { nodes } = await renderModelRow(plugin, mini, { ok: true, value: catalogValue() })
-  const badge = nodes.find((n) => n.type === 'span' && n.props.style && n.props.style.display === 'inline-flex')
-  assert.ok(badge !== undefined, '应有一个 inline-flex 的外层')
-  assert.equal(badge.props.style.alignItems, 'center')
-  assert.equal(badge.props.style.gap, '5px')
-  assert.equal(badge.props.style.marginLeft, '6px')
-  assert.equal(badge.props.style.fontSize, '11px')
-  assert.equal(badge.props.style.fontVariantNumeric, 'tabular-nums')
-  assert.equal(badge.props.style.whiteSpace, 'nowrap')
-  assert.equal(badge.props.style.width, undefined, '不能设固定宽度')
-  const dot = statusDots(nodes)[0]
+  const chip = nodes.find((n) => n.type === 'span' && n.props.style && n.props.style.display === 'inline-flex')
+  assert.ok(chip !== undefined, '应有一个 inline-flex 的外层')
+  const style = chip.props.style
+  // 容器（任务单 2026-11-15 §2.3 的规范性要求；原「gap 5px / 外层 fontSize」断言随重绘同步，意图不变）。
+  assert.equal(style.alignItems, 'center')
+  assert.equal(style.gap, '4px')
+  assert.equal(style.height, '18px')
+  assert.equal(style.padding, '0 6px')
+  assert.equal(style.borderRadius, '999px')
+  assert.equal(style.lineHeight, '18px')
+  assert.equal(style.marginLeft, '6px')
+  assert.equal(style.whiteSpace, 'nowrap')
+  assert.equal(style.width, undefined, '不能设固定宽度')
+  assert.ok(!('width' in style), 'style 里不得出现 width 键')
+  assert.equal(style.background, 'var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.10))', '背景走宿主主题 token')
+  assert.ok(
+    String(style.boxShadow).startsWith('inset 0 0 0 1px'),
+    '描边用 inset box-shadow（border 会改变盒高导致行高抖动）',
+  )
+  // 可访问性：容器是 role=img 的整体，可访问名与 title 同文。
+  assert.equal(chip.props.role, 'img')
+  assert.equal(chip.props.title, chip.props['aria-label'], 'aria-label 与 title 同文')
+  assert.ok(chip.props['aria-label'].includes('空闲'), `aria 含状态中文，实际：${chip.props['aria-label']}`)
+  assert.ok(chip.props['aria-label'].includes('20.1%'), 'aria 含百分比')
+  // 内部结构：状态点（aria-hidden）+ 百分比文本。
+  assert.equal(chip.children.length, 2, 'chip 只应有状态点与百分比两个子节点')
+  const dot = chip.children[0]
+  assert.equal(dot.props['aria-hidden'], 'true')
   assert.equal(dot.props.style.width, '6px')
   assert.equal(dot.props.style.height, '6px')
+  assert.equal(dot.props.style.flex, 'none')
+  const text = chip.children[1]
+  assert.equal(text.props.style.fontSize, '11px')
+  assert.equal(text.props.style.fontWeight, 600)
+  assert.equal(text.props.style.fontVariantNumeric, 'tabular-nums')
+  assert.equal(text.props.style.color, 'var(--sys-color-on-surface-subtle, #59636e)', '文本用具名 token，不再 opacity 压灰')
+  assert.equal(text.props.style.opacity, undefined, '不得再用 opacity 压灰（无法算对比度）')
+  assert.equal(textOf(text), '20.1%')
 })
 
 await test('selected 为 true 时不改变徽章渲染（选中态由父级样式负责）', async () => {
@@ -1295,11 +1336,14 @@ await test('rpc 抛异常时不崩，显示错误文案', async () => {
   mini.unmount()
 })
 
-await test('模型行在 rpc 失败时降级为灰点 + 「—」，模型名仍可见', async () => {
+await test('模型行在 rpc 失败时降级为虚线环点 + 「—」，模型名仍可见', async () => {
   const { text, nodes } = await renderModelRow(plugin, mini, { ok: false, error: { code: 'internal', message: 'boom' } })
   assert.ok(text.includes('Qwen3.8-27B'), `模型名仍要显示，实际：${text}`)
   assert.ok(text.includes('—'), `应显示破折号，实际：${text}`)
-  assert.equal(statusDots(nodes)[0].props.style.background, '#9ca3af')
+  const dot = statusDots(nodes)[0].props.style
+  // M5 起无数据 = 透明底虚线环（原「灰点 #9ca3af」断言按新形态改写，意图不变）。
+  assert.equal(dot.background, 'transparent')
+  assert.ok(String(dot.border).includes('dashed'))
 })
 
 await test('模型行在 rpc 抛异常时降级为灰点 + 「—」，模型名仍可见', async () => {
@@ -1482,6 +1526,151 @@ await test('useSnapshot 抛错时向上抛，不吞错（由宿主 SlotErrorBoun
     threw = true
   }
   assert.equal(threw, true, '渲染期异常不应被渲染函数吞掉：宿主负责 abdicate 与兜底')
+})
+
+//#endregion
+
+//#region 任务单 2026-11-15 · 任务 A：chip 美化（badgeView 四态 / shapeOf / 对比度 / 渲染树 / 幂等 / 脏数据）
+console.log('\n# 任务单 2026-11-15 · 任务 A：chip 美化')
+
+/**
+ * WCAG 2.x 相对亮度：sRGB 通道线性化后按 0.2126/0.7152/0.0722 加权。
+ * 输入 #rrggbb，返回 0..1 的亮度。这是公式实现，不是查表。
+ */
+function luminance(hex) {
+  const value = hex.replace('#', '')
+  const channels = [0, 2, 4]
+    .map((offset) => parseInt(value.slice(offset, offset + 2), 16) / 255)
+    .map((channel) => (channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4)))
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+}
+
+/** WCAG 对比度 (L亮+0.05)/(L暗+0.05)。真算，不硬编码通过值。 */
+function contrastRatio(fg, bg) {
+  const l1 = luminance(fg)
+  const l2 = luminance(bg)
+  const [hi, lo] = l1 >= l2 ? [l1, l2] : [l2, l1]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+await test('badgeView 四态齐全：0.0% → idle；无读数 → unknown；0.0% 与 — 不是同一串', () => {
+  const zero = catalogValue({
+    loadTs: new Date(2026, 9, 25, 17, 20, 0).getTime(),
+    groups: [
+      {
+        label: 'LLM (Text)',
+        models: [{ id: 'zero-model', state: 'idle', utilization: 0, free: true, badgeLabel: 'Free', hasLoad: true, stale: false }],
+      },
+    ],
+  })
+  const has = plugin.badgeView(zero, 'zero-model')
+  assert.equal(has.state, 'idle', `0 是读数 → idle，实际：${has.state}`)
+  assert.equal(has.percent, '0.0%', '0 要显示成 0.0%')
+  assert.equal(has.label, '空闲')
+  assert.notEqual(has.percent, '—', '**0.0% 与 — 必须不是同一串**：0 是读数，— 是没有读数')
+  assert.ok(has.aria.includes('空闲') && has.aria.includes('0.0%'), `aria 应含状态中文与百分比，实际：${has.aria}`)
+  assert.equal(has.aria, has.title, 'aria 与 title 同文')
+
+  const none = catalogValue({
+    loadTs: new Date(2026, 9, 25, 17, 20, 0).getTime(),
+    groups: [
+      {
+        label: 'LLM (Text)',
+        models: [{ id: 'none-model', state: 'idle', utilization: null, free: true, badgeLabel: 'Free', hasLoad: false, stale: false }],
+      },
+    ],
+  })
+  const missing = plugin.badgeView(none, 'none-model')
+  assert.equal(missing.state, 'unknown', '无读数 → unknown')
+  assert.equal(missing.percent, '—', '无读数 → —')
+  assert.equal(missing.label, '无数据')
+})
+
+await test('shapeOf 四态两两不等（「不只靠颜色」的可测形式）', () => {
+  const states = ['idle', 'busy', 'full', 'unknown']
+  const shapes = states.map((state) => JSON.stringify(plugin.shapeOf(state)))
+  for (let i = 0; i < shapes.length; i += 1) {
+    for (let j = i + 1; j < shapes.length; j += 1) {
+      assert.notEqual(shapes[i], shapes[j], `${states[i]} 与 ${states[j]} 的形状必须不同：${shapes[i]} vs ${shapes[j]}`)
+    }
+  }
+})
+
+await test('对比度：chip 文字色对 chip 底 ≥ 4.5:1（WCAG 公式真算，不硬编码）', () => {
+  const fg = '#59636e'
+  const bg = '#f4f4f5'
+  const ratio = contrastRatio(fg, bg)
+  assert.ok(ratio >= 4.5, `${fg} on ${bg} 应 ≥ 4.5:1，实际 ${ratio.toFixed(2)}`)
+  assert.ok(contrastRatio(fg, '#ffffff') >= 4.5, '白底（宿主可能给纯白 layer）也要达标')
+  // 锁住偏离原因：任务单原拟的 #6b7280 在同底上只有 4.40:1，不达标才换成 #59636e。
+  assert.ok(contrastRatio('#6b7280', bg) < 4.5, '#6b7280 on #f4f4f5 不达标（4.40），这是换色的依据')
+})
+
+await test('渲染树：外层只有一枚 chip span（role=img）、无 width 键、nowrap、aria 含状态中文与百分比', async () => {
+  const { nodes } = await renderModelRow(plugin, mini, { ok: true, value: catalogValue() })
+  const chips = nodes.filter((n) => n.type === 'span' && n.props.role === 'img')
+  assert.equal(chips.length, 1, `应只有一枚 chip，实际 ${chips.length}`)
+  const chip = chips[0]
+  assert.equal(chip.props.style.display, 'inline-flex')
+  assert.ok(!('width' in chip.props.style), '不得有 width 键（宽度由内容决定）')
+  assert.equal(chip.props.style.whiteSpace, 'nowrap')
+  assert.ok(chip.props['aria-label'].includes('空闲'), `aria 含状态中文，实际：${chip.props['aria-label']}`)
+  assert.ok(chip.props['aria-label'].includes('20.1%'), 'aria 含百分比')
+})
+
+/** 元素树最大深度。 */
+function depthOf(node) {
+  if (node === null || node === undefined || typeof node === 'boolean') return 0
+  if (Array.isArray(node)) return node.reduce((max, child) => Math.max(max, depthOf(child)), 0)
+  if (typeof node !== 'object' || !node.__el) return 0
+  if (typeof node.type === 'function') return depthOf(node.type(node.props))
+  return 1 + node.children.reduce((max, child) => Math.max(max, depthOf(child)), 0)
+}
+
+await test('幂等：同一快照连续渲染 3 次，三棵树逐字节一致（渲染期不写会漂移的模块级状态）', async () => {
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
+  const props = {
+    provider: { id: 'amd', name: 'AMD' },
+    model: { id: 'Qwen3.8-27B', name: 'Qwen3.8-27B' },
+    placement: 'option',
+    selected: false,
+    ...mounted.modelRow.spec.inject(),
+  }
+  const trees = []
+  for (let round = 0; round < 3; round += 1) {
+    trees.push(await mini.render(mounted.modelRow.Component, props))
+  }
+  const serialized = trees.map((tree) => JSON.stringify(tree))
+  assert.equal(serialized[0], serialized[1], '第 1、2 次渲染树必须一致')
+  assert.equal(serialized[1], serialized[2], '第 2、3 次渲染树必须一致')
+  assert.ok(depthOf(trees[0]) > 0, '树非空才有深度可言')
+  assert.equal(depthOf(trees[0]), depthOf(trees[1]), '深度一致')
+  assert.equal(depthOf(trees[1]), depthOf(trees[2]), '深度一致')
+  mini.unmount()
+})
+
+await test('脏数据降级：utilization 为 NaN / "63" / null 时不抛错，模型名可见，降为 unknown chip（不编数字）', async () => {
+  for (const utilization of [NaN, '63', null]) {
+    const value = catalogValue({
+      groups: [
+        {
+          label: 'LLM (Text)',
+          models: [{ id: 'dirty', state: 'idle', utilization, free: true, badgeLabel: 'Free', hasLoad: true, stale: false }],
+        },
+      ],
+    })
+    const { text, nodes } = await renderModelRow(plugin, mini, { ok: true, value }, {
+      model: { id: 'dirty', name: 'Dirty Model' },
+    })
+    assert.ok(text.includes('Dirty Model'), `utilization=${String(utilization)}：模型名必须可见`)
+    assert.ok(text.includes('—'), `utilization=${String(utilization)}：读数不可信时显示 —，不编数字`)
+    assert.equal(statusDots(nodes).length, 1, `utilization=${String(utilization)}：chip 仍要显示（消失像插件没装）`)
+    const chip = nodes.find((n) => n.type === 'span' && n.props.role === 'img')
+    assert.ok(chip.props['aria-label'].includes('无数据'), `脏读数按无数据处理，实际：${chip.props['aria-label']}`)
+    const dot = chip.children[0].props.style
+    assert.equal(dot.background, 'transparent', '无数据点不填色')
+    assert.ok(String(dot.border).includes('dashed'), '无数据点是虚线环')
+  }
 })
 
 //#endregion
