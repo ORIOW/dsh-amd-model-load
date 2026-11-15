@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dsh-amd-model-load · 负载 chip 四态预览</title>
+<style>
+  /* 与宿主同名 token 的本地替身：预览脱离宿主渲染时变量有值；
+     真机里由宿主主题接管，这里的值不生效。 */
+  :root {
+    --dsw-alias-bg-layer-1: #ffffff;
+    --dsw-alias-border-l2: rgba(127, 127, 127, 0.22);
+    --sys-color-on-surface-subtle: #59636e;
+  }
+  .dark {
+    --dsw-alias-bg-layer-1: #161b22;
+    --dsw-alias-border-l2: rgba(127, 127, 127, 0.30);
+    --sys-color-on-surface-subtle: #8b949e;
+  }
+  body { margin: 0; font: 13px/1.6 system-ui, sans-serif; }
+  section { padding: 24px; }
+  section.light { background: #ffffff; color: #1f2328; }
+  section.dark { background: #0d1117; color: #e6edf3; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  h2 { font-size: 13px; margin: 0 0 12px; opacity: 0.7; }
+  .row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .name { font-size: 13px; }
+  pre { margin: 0; font-size: 11px; opacity: 0.65; white-space: pre-wrap; word-break: break-all; }
+  footer { padding: 0 24px 24px; font-size: 11px; opacity: 0.6; }
+</style>
+</head>
+<body>
+<section class="light">
+  <h1>负载 chip · 浅色主题</h1>
+  <h2>真机里背景 / 描边 / 文字色由 DSH 主题 token 接管，此处为本地替身值</h2>
+  <div class="row">
+    <span class="name">Qwen3.8-27B</span>Qwen3.8-27B<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>Qwen3.8-27B&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">空闲（实心圆）</p>
+  <div class="row">
+    <span class="name">Qwen3.8-Flash-Next</span>Qwen3.8-Flash-Next<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>Qwen3.8-Flash-Next&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">繁忙（半填充圆 + 细环）</p>
+  <div class="row">
+    <span class="name">GLM-5.3-Flash</span>GLM-5.3-Flash<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>GLM-5.3-Flash&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">满载（方块）</p>
+  <div class="row">
+    <span class="name">d3</span>d3<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>d3&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">无数据（虚线环，不填色）</p>
+</section>
+<section class="dark">
+  <h1>负载 chip · 深色主题</h1>
+  <h2>点的颜色经 color-mix(accent 70%, currentColor) 跟随主题文字色自动提亮</h2>
+  <div class="row">
+    <span class="name">Qwen3.8-27B</span>Qwen3.8-27B<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>Qwen3.8-27B&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">空闲（实心圆）</p>
+  <div class="row">
+    <span class="name">Qwen3.8-Flash-Next</span>Qwen3.8-Flash-Next<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>Qwen3.8-Flash-Next&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">繁忙（半填充圆 + 细环）</p>
+  <div class="row">
+    <span class="name">GLM-5.3-Flash</span>GLM-5.3-Flash<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>GLM-5.3-Flash&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">满载（方块）</p>
+  <div class="row">
+    <span class="name">d3</span>d3<span role="img" title="AMD 负载：无数据 —，更新于 20:15" aria-label="AMD 负载：无数据 —，更新于 20:15"><span aria-hidden="true"></span><span>—</span></span>
+    <pre>d3&lt;span role=&quot;img&quot; title=&quot;AMD 负载：无数据 —，更新于 20:15&quot; aria-label=&quot;AMD 负载：无数据 —，更新于 20:15&quot;&gt;&lt;span aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;span&gt;—&lt;/span&gt;&lt;/span&gt;</pre>
+  </div>
+  <p style="margin:0 0 16px;font-size:11px;opacity:.6">无数据（虚线环，不填色）</p>
+</section>
+<footer>由 scripts/render-usage-chip.mjs 生成（真组件序列化，非手工复刻）；数据为固定 fixture，时间 20:15。</footer>
+</body>
+</html>
