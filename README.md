@@ -85,7 +85,7 @@ git clone https://github.com/ORIOW/dsh-amd-model-load.git
 
 在 `插件 → 添加插件` 里填本地路径或仓库地址。这条路径**尚未实测**，遇到问题请优先用方式一。
 
-> ⚠️ 本插件**尚未发布到 npm**（截至 v0.1.1），填包名 `dsh-amd-model-load` 是装不上的。
+> ⚠️ 本插件**尚未发布到 npm**（截至 v0.1.2），填包名 `dsh-amd-model-load` 是装不上的。
 
 ### 校验安装
 

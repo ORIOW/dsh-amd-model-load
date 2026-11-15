@@ -85,7 +85,7 @@ After that, opening the `dsh-amd-model-load` page under `Plugins → Installed` 
 
 Use `Plugins → Add plugin` with a local path or a repository URL. This route is **not verified yet**; prefer Option 1 if anything misbehaves.
 
-> ⚠️ The plugin is **not published to npm** as of v0.1.1, so entering the package name `dsh-amd-model-load` will not install anything.
+> ⚠️ The plugin is **not published to npm** as of v0.1.2, so entering the package name `dsh-amd-model-load` will not install anything.
 
 ### Verifying the install
 
