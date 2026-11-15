@@ -4,7 +4,7 @@
 
 在 DeepSeek Harness（DSH Desktop）里给 **AMD Radeon TokenFactory** 的免费模型显示实时负载徽章。
 
-模型选择列表里每一行会多出一个「状态点 + 百分比」，比如 `● 20.1%`，同时设置页有一张卡片把 15 个免费模型按 AMD 官网的五类分组列出、组内按繁忙度从空闲到繁忙排序。
+模型选择列表里每一行会多出一枚「状态点 + 百分比」的负载 chip，比如 `[●] 20.1%`；插件的配置页（`插件 → 已安装 → dsh-amd-model-load` → 行「配置」）有一张卡片，把 15 个免费模型按 AMD 官网的五类分组列出、组内按繁忙度从空闲到繁忙排序。本插件不再注册设置页，配置入口在 插件 → 已安装 → dsh-amd-model-load。
 
 > 数据来自 AMD 公开的负载接口，**不需要 API Key**。
 
@@ -14,7 +14,7 @@
 
 ## 快速开始
 
-前置：DSH Desktop 0.12.1 或更新（内嵌 dsh 0.2.1-rc.2），本机已装 `pnpm`。
+前置：DSH Desktop 0.12.1 或更新（内嵌 dsh 0.2.1-rc.2）即可装；但**配置入口**（插件行的「配置」按钮）需要 0.14.0+（内嵌 dsh ≥ 0.2.2-rc.1，见[已知限制](#已知限制)），本机已装 `pnpm`。
 
 ```sh
 git clone https://github.com/ORIOW/dsh-amd-model-load.git
@@ -27,14 +27,14 @@ git clone https://github.com/ORIOW/dsh-amd-model-load.git
 "dsh-amd-model-load": "link:/absolute/path/to/dsh-amd-model-load"
 ```
 
-在同一个目录跑 `pnpm install`，然后**重启 DSH Desktop**。重启后 `设置 → AMD 模型负载` 出现卡片即为装好；日志怎么核对见[校验安装](#校验安装)。
+在同一个目录跑 `pnpm install`，然后**重启 DSH Desktop**。重启后在 `插件 → 已安装 → dsh-amd-model-load` 的行上能看到「配置」按钮、点开有负载卡片即为装好；日志怎么核对见[校验安装](#校验安装)。
 
 ## 界面预览
 
 下面是**文字示意，不是截图**——真实界面由 DSH 主题决定，颜色与间距随主题变化：
 
 ```text
-设置 → AMD 模型负载
+插件 → 已安装 → dsh-amd-model-load → 行「配置」
   VLM (Vision)                                   ← 组标题原样取上游 capability_label
     ● MiMo-V2.6-Flash      FREE   空闲    20.1%   ← 组内按繁忙度升序，空闲在前
     ● MiniCPM-V-4.7-1B     FREE   繁忙    61.8%
@@ -45,8 +45,8 @@ git clone https://github.com/ORIOW/dsh-amd-model-load.git
     ● MinerU2.5-Pro        FREE   空闲    12.4%
 
 模型选择列表
-  DeepSeek-V4.1-Flash-1017   ● 5.7%               ← 本插件追加，紧跟官方 1017 徽章
-  GLM-5.3-Flash              ● 33.2%
+  DeepSeek-V4.1-Flash-1017   [●] 5.7%             ← 本插件追加的 chip，紧跟官方 1017 徽章
+  GLM-5.3-Flash              [●] 33.2%
 ```
 
 一行读数的固定顺序是「状态点 → 模型 id → FREE 徽章 → 状态文字 → 百分比」；没有负载数据的行整行降到 55% 不透明度，右侧显示 `—` 而不是编造一个数字。
@@ -55,8 +55,8 @@ git clone https://github.com/ORIOW/dsh-amd-model-load.git
 
 | 挂载点 | 效果 |
 | --- | --- |
-| 设置页「AMD 模型负载」 | 按 `VLM / LLM / Decision / TTS / OCR` 五类分组；组内按 utilization 升序（空闲在前）；带 `FREE` 徽章的模型照抄 AMD 官网样式；顶部显示最后更新时间，超时自动标记为过期 |
-| 模型选择列表（`conversation.input.model.label`） | 每个 AMD 模型的 `option` 行追加「● 百分比」；非 AMD 行、收起按钮、菜单顶部保持原样 |
+| 插件行配置页（`plugins.row.config`，key = `dsh-amd-model-load#amd-model-load`） | 按 `VLM / LLM / Decision / TTS / OCR` 五类分组；组内按 utilization 升序（空闲在前）；带 `FREE` 徽章的模型照抄 AMD 官网样式；顶部显示最后更新时间，超时自动标记为过期 |
+| 模型选择列表（`conversation.input.model.label`） | 每个 AMD 模型的 `option` 行追加一枚负载 chip（状态点 + 百分比，悬浮与读屏可读完整语义）；非 AMD 行、收起按钮、菜单顶部保持原样 |
 | 兼容性 | 不覆盖 DeepSeek 官方的 `1017` 徽章：本插件在 `priority: -1` 注册，代渲染官方的「模型名 + 1017」形态后再追加自己的徽章 |
 
 轮询节奏：**负载 10 分钟**一次（AMD 的 VLM/LLM 只有十几到三十 tokens/s，更快没有意义），**目录 6 小时**一次。
@@ -78,7 +78,7 @@ git clone https://github.com/ORIOW/dsh-amd-model-load.git
 3. 在同一目录跑 `pnpm install`，生成 `node_modules` 里的符号链接。
 4. **重启 DSH Desktop**（宿主只在启动时重新组合插件；改 profile 触发的 HMR 在依赖未就绪时不重试）。
 
-装好后：`设置 → AMD 模型负载` 应出现卡片，日志里能看到 `[amd-model-load] host loaded` 与 `catalog ok: 15 models`。
+装好后：`插件 → 已安装 → dsh-amd-model-load` 的行上应出现「配置」按钮，点开有负载卡片；日志里能看到 `[amd-model-load] host loaded` 与 `catalog ok: 15 models`。
 
 ### 方式二：插件页添加
 
@@ -130,6 +130,7 @@ tail -f "/Users/dengjiawei/Library/Logs/DSH Desktop/harness.log" | grep amd-mode
 
 ## 已知限制
 
+- **配置入口需要 DSH Desktop ≥ 0.14.0（内嵌 dsh ≥ 0.2.2-rc.1）**：`plugins.row.config` 是 0.2.2-rc.1 才有的 slot，而 `slots.inject` 对未声明的 slot 是静默等待（不报错、不打日志）——旧版本宿主上「配置」按钮与配置页都不会出现，且没有任何日志可查。v0.1.1 及更早版本注册的是设置页，本插件**不再注册设置页，配置入口在 插件 → 已安装 → dsh-amd-model-load**。
 - **只覆盖 Public Free 区的 15 个模型**，Dedicated 区（MiniCPM 系列）按设计不显示。
 - 依赖 AMD 的公开接口，对方改版就会失效；`load` 端点单次响应约 26 秒，首次出数是慢的，属正常。
 - 与 `dsh-reasoning-effort` **0.8.1 及更早**同装时，模型列表的徽章不会显示：那个版本以 `priority: -100` 整个替换了 composer 的模型选择器，且从不渲染 `conversation.input.model.label` 子 slot，连官方 `1017` 徽章也会一起消失。**0.9.0 起上游改成「包裹原生组件」，已修好**。排查过程见 [M4-UPSTREAM-FINDING.md](M4-UPSTREAM-FINDING.md)。
@@ -143,7 +144,7 @@ tail -f "/Users/dengjiawei/Library/Logs/DSH Desktop/harness.log" | grep amd-mode
 ```sh
 node test/load-source.test.mjs   # 32 用例：归一化、过期判定、轮询器
 node test/catalog.test.mjs       # 50 用例：目录解析、五分类分组、排序
-node test/client.test.mjs        # 72 用例：两个 slot 的注册与渲染分支
+node test/client.test.mjs        # 82 用例：两个 slot 的注册与渲染分支
 bash test/with-stub.sh           # 24 用例：host 半身（临时建 schemastery 桩，退出即删）
 ```
 
@@ -161,7 +162,7 @@ node test/e2e-live.mjs
 lib/index.js        host 半身：双轮询器 + loopback RPC 通道（load / catalog / refresh / diag）
 lib/load-source.js  负载数据源（零依赖，可裸跑单测）
 lib/catalog.js      目录数据源 + 五分类分组排序（零依赖）
-lib/client.js       浏览器半身：设置卡 + 模型行徽章，共用唯一快照订阅器
+lib/client.js       浏览器半身：插件行配置页 + 模型行 chip，共用唯一快照订阅器
 cordis.patch.yml    bundle 补丁：把插件 insert 进 profile
 test/               四个套件 + fixtures + with-stub.sh + e2e-live.mjs
 ```

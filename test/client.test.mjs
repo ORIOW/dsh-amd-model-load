@@ -283,7 +283,9 @@ function mount(plugin, rpc, options = {}) {
     registered,
     slotsInjected,
     bySlot,
-    settings: bySlot('settings.section'),
+    // M5：设置卡挪进 keyed slot `plugins.row.config`（插件 → 已安装 → 行「配置」）。
+    // 属性名保留 settings —— M3 以来的卡片用例全走 mountCard()，语义仍是「那张卡」。
+    settings: bySlot('plugins.row.config'),
     modelRow: bySlot('conversation.input.model.label'),
   }
 }
@@ -412,16 +414,25 @@ await test('inject 扩为 ["slots","connection"]', () => {
   assert.equal(Array.from(plugin.inject).join(','), 'slots,connection')
 })
 
-await test('apply 注册进 settings.section，带 id/order/label/inject', () => {
+await test('apply 注册进 plugins.row.config，key=<包名>#<行 id>，inject 仍是共享 store（不再有设置页）', () => {
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
-  assert.ok(mounted.slotsInjected.includes('settings.section'))
+  // 注册位置断言（原「注册进 settings.section，带 id/order/label/inject」按 keyed slot 改写：
+  // keyed slot 用 key 定位，id/order/label 在这个 slot 上没有意义 —— 意图不变：注册形状正确）。
+  assert.ok(mounted.slotsInjected.includes('plugins.row.config'))
+  assert.ok(
+    !mounted.slotsInjected.includes('settings.section'),
+    '设置页 slot 已整体移除，不得双注册（两处都渲染会让人以为有两个设置页）',
+  )
   const { spec, Component } = mounted.settings
-  assert.equal(spec.name, 'settings.section')
-  assert.equal(spec.id, 'dsh-amd-model-load')
-  assert.equal(spec.order, 60)
-  assert.equal(typeof spec.label, 'function')
-  assert.equal(spec.label(), 'AMD 模型负载')
+  assert.equal(spec.name, 'plugins.row.config')
+  assert.equal(spec.key, 'dsh-amd-model-load#amd-model-load')
+  assert.equal(spec.id, undefined, 'keyed slot 用 key 定位，不再带 id')
+  assert.equal(typeof spec.inject, 'function')
   assert.ok(spec.inject().store !== undefined, 'inject 应提供共享 store')
+  // 与 conversation.input.model.label 拿到的必须是同一个 store 引用（同一份数据、同一时间戳）。
+  const rowStore = spec.inject().store
+  const labelStore = mounted.modelRow.spec.inject().store
+  assert.equal(rowStore, labelStore, '行配置页与模型行徽章必须是同一个 store')
   assert.equal(typeof Component, 'function')
 })
 
@@ -513,8 +524,10 @@ await test('rpc 为 undefined 时渲染不崩（只有空态）', async () => {
   const { spec, Component } = mountCard(plugin, undefined)
   const tree = await mini.render(Component, spec.inject())
   const text = textOf(tree)
-  assert.ok(text.includes('AMD 模型负载'))
   assert.ok(text.includes('目录尚未取到'), '没有目录时应显示空态文案')
+  // M5 起卡片挪进插件行详情页：页面级大标题去掉（行详情页自带「amd-model-load」标题），
+  // 原「应显示 AMD 模型负载 标题」的断言按新形态反转，意图不变：渲染结果可辨认、不崩。
+  assert.ok(!text.includes('AMD 模型负载'), '不应再渲染页面级大标题')
   mini.unmount()
 })
 //#endregion
@@ -1399,8 +1412,8 @@ await test('apply 入口与每次 register 都打统一前缀的日志（不再�
     `应有 apply 入口日志，实际：${JSON.stringify(logs)}`,
   )
   assert.ok(
-    logs.some((line) => line.includes('slots.register → settings.section')),
-    '应有 settings.section 注册前日志',
+    logs.some((line) => line.includes('slots.register → plugins.row.config')),
+    '应有 plugins.row.config 注册前日志',
   )
   assert.ok(
     logs.some((line) => line.includes('slots.register → conversation.input.model.label')),
@@ -1671,6 +1684,78 @@ await test('脏数据降级：utilization 为 NaN / "63" / null 时不抛错，�
     assert.equal(dot.background, 'transparent', '无数据点不填色')
     assert.ok(String(dot.border).includes('dashed'), '无数据点是虚线环')
   }
+})
+
+//#endregion
+
+//#region 任务单 2026-11-15 · 任务 B：插件行配置页（M5）
+console.log('\n# 任务单 2026-11-15 · 任务 B：插件行配置页')
+
+/**
+ * 反推测试（关键，防将来静默失效）：client 半身跑在浏览器里不能读文件，
+ * PLUGIN_ROW_KEY 只能写成常量 —— 这里从仓库两个来源文件反推并比对，
+ * 将来改包名或 patch 行 id 时，这条测试立刻红，key 不会静默漂移。
+ */
+await test('反推：key = package.json 的 name + cordis.patch.yml 的第一个 - id', () => {
+  const pkg = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8'))
+  const patch = readFileSync(join(here, '..', 'cordis.patch.yml'), 'utf8')
+  const rowId = patch.match(/^\s*-\s*id:\s*(\S+)\s*$/m)[1]
+  assert.equal(pkg.name, 'dsh-amd-model-load', 'package.json 的 name 变了要同步 NS 常量')
+  assert.equal(rowId, 'amd-model-load', 'cordis.patch.yml 的行 id 变了要同步 PLUGIN_ROW_ROW_ID')
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
+  assert.equal(
+    mounted.settings.spec.key,
+    `${pkg.name}#${rowId}`,
+    `注册 key 必须等于 ${pkg.name}#${rowId}，实际：${mounted.settings.spec.key}`,
+  )
+  assert.equal(mounted.settings.spec.key, 'dsh-amd-model-load#amd-model-load')
+})
+
+await test('Card view:"summary" 是单行摘要（无分组容器/标题），view:"page" 是完整卡（有分组）', async () => {
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
+  const { spec, Component } = mounted.settings
+
+  const summary = await mini.render(Component, { ...spec.inject(), view: 'summary' })
+  const summaryText = textOf(summary)
+  assert.ok(!summaryText.includes('VLM (Vision)'), 'summary 是描述位，不应渲染分组标题（否则撑成一大块）')
+  assert.ok(!summaryText.includes('FREE'), 'summary 不渲染整卡')
+  assert.ok(summaryText.includes('空闲'), `摘要应含状态词，实际：${summaryText}`)
+  assert.ok(/\d+ \/ \d+/.test(summaryText), `摘要应有「N / M」形态，实际：${summaryText}`)
+  assert.ok(summaryText.includes('更新于'), '摘要带「更新于」纪律')
+
+  const page = await mini.render(Component, spec.inject())
+  const pageText = textOf(page)
+  assert.ok(pageText.includes('VLM (Vision)'), 'page 视图有分组标题')
+  assert.ok(pageText.includes('FREE'), 'page 视图是完整卡')
+  assert.ok(!pageText.includes('AMD 模型负载'), 'page 视图不渲染页面级大标题（行详情页自带标题）')
+  assert.ok(pageText.includes('更新于'), 'page 视图保留「更新于」纪律')
+  mini.unmount()
+})
+
+await test('Card view:"summary" 无数据时给单行占位，不渲染整卡空态', async () => {
+  const { spec, Component } = mountCard(plugin, { call: async () => ({ ok: true, value: null }) })
+  const tree = await mini.render(Component, { ...spec.inject(), view: 'summary' })
+  const text = textOf(tree)
+  assert.ok(text.includes('暂无数据'), `实际：${text}`)
+  assert.ok(!text.includes('目录尚未取到'), 'summary 不复用 page 视图的空态文案')
+  mini.unmount()
+})
+
+await test('apply 入口日志打印将注册的两个 slot 与 row key（slots.inject 静默等待，无日志就无从排查）', () => {
+  const captured = captureConsole()
+  try {
+    mount(plugin, { call: async () => ({ ok: true, value: null }) })
+  } finally {
+    captured.restore()
+  }
+  const line = captured.logCalls.find(
+    (entry) =>
+      entry.includes('[amd-model-load]') &&
+      entry.includes('plugins.row.config') &&
+      entry.includes('dsh-amd-model-load#amd-model-load'),
+  )
+  assert.ok(line !== undefined, `应有一条同时提到 slot 与 key 的 apply 日志，实际：${JSON.stringify(captured.logCalls)}`)
+  assert.ok(line.includes('conversation.input.model.label'), '同一条日志也应提到模型行 slot')
 })
 
 //#endregion
