@@ -286,6 +286,9 @@ function mount(plugin, rpc, options = {}) {
     // M5：设置卡挪进 keyed slot `plugins.row.config`（插件 → 已安装 → 行「配置」）。
     // 属性名保留 settings —— M3 以来的卡片用例全走 mountCard()，语义仍是「那张卡」。
     settings: bySlot('plugins.row.config'),
+    // 2026-11-15：包详情页（插件 → 已安装 → dsh-amd-model-load）的配置槽，
+    // key 是裸包名；与行详情页共用同一个 Card 与同一个 store。
+    bundle: bySlot('plugins.bundle.config'),
     modelRow: bySlot('conversation.input.model.label'),
   }
 }
@@ -493,7 +496,31 @@ await test('不再注册 conversation.input.right（M2 工具行卡已按用户�
     !mounted.slotsInjected.includes('conversation.input.right'),
     `不应再注入 conversation.input.right，实际：${mounted.slotsInjected.join(',')}`,
   )
-  assert.equal(mounted.registered.length, 2, '只应有两个注册项：设置卡 + 模型行徽章')
+  assert.equal(mounted.registered.length, 3, '应有三个注册项：包详情页卡 + 行详情页卡 + 模型行徽章')
+})
+
+await test('包详情页注册：plugins.bundle.config 的 key 是裸包名（不带 #行 id）', () => {
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
+  const { spec } = mounted.bundle
+  assert.ok(spec !== undefined, '必须注册 plugins.bundle.config，否则包详情页不渲染 data-plugin-config 那一节')
+  assert.equal(spec.name, 'plugins.bundle.config')
+  // 宿主 PackageDetail：renderSlot("plugins.bundle.config", { view: "page" }, { entryKey: pkg.name })
+  // ⇒ key 必须与 package.json 的 name 完全一致（NS），带 `#` 会永远命中不了。
+  assert.equal(spec.key, 'dsh-amd-model-load')
+  assert.ok(!String(spec.key).includes('#'), 'bundle 槽的 key 不能带 #，那是行槽的格式')
+  // 与行详情页、模型行共用同一份快照 store。
+  assert.equal(spec.inject().store, mounted.settings.spec.inject().store)
+})
+
+await test('包详情页 view:"page" 直接给出 5 个分组与各自使用率（不用再点进组件页）', async () => {
+  const mounted = mount(plugin, { call: async () => ({ ok: true, value: catalogValue() }) })
+  const tree = await mini.render(mounted.bundle.Component, mounted.bundle.spec.inject())
+  const text = textOf(tree)
+  for (const label of ['VLM (Vision)', 'LLM (Text)', 'Decision (Classifier)', 'TTS (Speech)', 'OCR (Document)']) {
+    assert.ok(text.includes(label), `包详情页应直接可见分组「${label}」，实际：${text.slice(0, 300)}`)
+  }
+  assert.ok(/\d+\.\d%/.test(text), `包详情页应直接可见使用率数值，实际：${text.slice(0, 300)}`)
+  mini.unmount()
 })
 
 await test('两个 slot 拿到的是**同一个** store 实例（共享订阅器的前提）', () => {
@@ -1290,7 +1317,18 @@ await test('样式：18px 胶囊 chip（inline-flex + inset 描边 + nowrap）�
   assert.equal(text.props.style.fontSize, '11px')
   assert.equal(text.props.style.fontWeight, 600)
   assert.equal(text.props.style.fontVariantNumeric, 'tabular-nums')
-  assert.equal(text.props.style.color, 'var(--sys-color-on-surface-subtle, #59636e)', '文本用具名 token，不再 opacity 压灰')
+  // 2026-11-15 用户反馈：深色模式下 on-surface-subtle（≈#59636e）压在深底 chip 上几乎看不见
+  // （实测 on #1c1c1e 仅 2.78:1）。改用宿主主文本色 on-surface（深色主题≈纯白），
+  // 缺 token 时回退 light-dark()，保证深浅两套主题都有可见的字色。
+  assert.equal(
+    text.props.style.color,
+    'var(--sys-color-on-surface, light-dark(#1f2328, #ffffff))',
+    '文本用具名 token（on-surface，深色模式为白），不再 opacity 压灰',
+  )
+  assert.ok(
+    !String(text.props.style.color).includes('on-surface-subtle'),
+    '不得再用 on-surface-subtle（深色主题下对比度不足）',
+  )
   assert.equal(text.props.style.opacity, undefined, '不得再用 opacity 压灰（无法算对比度）')
   assert.equal(textOf(text), '20.1%')
 })
@@ -1450,7 +1488,7 @@ await test('发布版不含诊断层：设置卡只注入 store，且不再额�
   const mounted = mount(plugin, { call: async () => ({ ok: true, value: null }) })
   const injected = mounted.settings.spec.inject()
   assert.deepEqual(Object.keys(injected), ['store'], '设置卡 inject 只应提供 store')
-  assert.equal(mounted.registered.length, 2, '仍应注册两个挂载点')
+  assert.equal(mounted.registered.length, 3, '仍应注册三个挂载点（包页卡 / 行页卡 / 模型行徽章）')
   // 诊断心跳（每 30 秒一条）若还在，apply 期间就会多出一个 interval。
   // 现在 apply 只建 store、不起表 —— store 的节拍在**首个订阅者**出现时才启动。
   assert.equal(timers.created - createdBefore, 0, 'apply 期间不应创建任何定时器')

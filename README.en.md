@@ -4,7 +4,7 @@
 
 Live load badges for **AMD Radeon TokenFactory** free models inside DeepSeek Harness (DSH Desktop).
 
-Every row of the model selector gets a load chip — a status dot plus a percentage, `[●] 20.1%` — and the plugin's config page (`Plugins → Installed → dsh-amd-model-load` → the row's "Configure" button) gets a card listing all 15 free models grouped by AMD's five categories, sorted from idle to busy inside each group. The plugin no longer registers a settings page; the config entry lives under Plugins → Installed → dsh-amd-model-load.
+Every row of the model selector gets a load chip — a status dot plus a percentage, `[●] 20.1%` — and **opening `Plugins → Installed → dsh-amd-model-load` shows that card directly** — all 15 free models grouped by AMD's five categories, sorted from idle to busy inside each group, with no extra click. The same card also appears on the row's "Configure" page. The plugin no longer registers a settings page.
 
 > The data comes from AMD's public load endpoint. **No API key required.**
 
@@ -34,7 +34,7 @@ Run `pnpm install` in that same directory, then **restart DSH Desktop**. Afterwa
 This is a **text sketch, not a screenshot** — the real UI follows your DSH theme, so colours and spacing vary:
 
 ```text
-Plugins → Installed → dsh-amd-model-load → Configure
+Plugins → Installed → dsh-amd-model-load    ← the package page shows this card directly
   VLM (Vision)                                   ← group title is the upstream capability_label, verbatim
     ● MiMo-V2.6-Flash      FREE   idle    20.1%   ← sorted by activity inside the group, idlest first
     ● MiniCPM-V-4.7-1B     FREE   busy    61.8%
@@ -55,6 +55,7 @@ A row always reads "status dot → model id → FREE badge → state text → pe
 
 | Mount point | Effect |
 | --- | --- |
+| Package page (`plugins.bundle.config`, key = `dsh-amd-model-load`) | Opening `Plugins → Installed → dsh-amd-model-load` renders the five-group card immediately (the host places it in the `data-plugin-config` section below the README document) |
 | Plugin-row config page (`plugins.row.config`, key `dsh-amd-model-load#amd-model-load`) | Groups models under `VLM / LLM / Decision / TTS / OCR`; sorts by ascending utilization (idlest first); reproduces AMD's own `FREE` badge styling; shows the last refresh time and flips to stale when the data ages out |
 | Model selector (`conversation.input.model.label`) | Appends a load chip (status dot + percentage, full semantics available to hover and screen readers) to each AMD model's `option` row; non-AMD rows, the collapsed trigger and the menu header stay untouched |
 | Compatibility | Does not swallow DeepSeek's official `1017` badge: the plugin registers at `priority: -1` and re-renders the official "model name + 1017" shape before appending its own badge |
@@ -78,7 +79,7 @@ This is a DSH third-party plugin. Two routes: `link:` mounting (**verified**) an
 3. Run `pnpm install` in that directory so the symlink exists under `node_modules`.
 4. **Restart DSH Desktop** — the host only recomposes plugins at startup, and the profile-change HMR pass does not retry once a dependency is missing.
 
-After that, the `dsh-amd-model-load` row under `Plugins → Installed` should show the "Configure" button, and the log should contain `[amd-model-load] host loaded` and `catalog ok: 15 models`.
+After that, opening the `dsh-amd-model-load` page under `Plugins → Installed` should show the five-group load card immediately (the row's "Configure" page shows the same card), and the log should contain `[amd-model-load] host loaded` and `catalog ok: 15 models`.
 
 ### Option 2 — plugin page
 
